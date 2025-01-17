@@ -16,7 +16,6 @@
 //!
 //! [Lemurs]: https://github.com/coastalwhite/lemurs
 
-use std::borrow::Cow;
 use std::fmt::Display;
 use std::num::ParseFloatError;
 use std::ops::Range;
