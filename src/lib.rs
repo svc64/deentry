@@ -46,27 +46,27 @@ use std::str::Lines;
 /// # Ok::<(), deentry::LinedError<deentry::GroupParseError>>(())
 /// ```
 #[derive(Debug, Clone)]
-pub struct DesktopEntry<'a> {
-    groups: Vec<DesktopEntryGroup<'a>>,
+pub struct DesktopEntry {
+    groups: Vec<DesktopEntryGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DesktopEntryGroup<'a> {
+pub struct DesktopEntryGroup {
     line_range: Range<usize>,
-    group_name: &'a str,
-    entries: Vec<DesktopEntryGroupEntry<'a>>,
+    group_name: String,
+    entries: Vec<DesktopEntryGroupEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DesktopEntryGroupEntry<'a> {
-    locale: Option<&'a str>,
-    key: &'a str,
-    value: EntryValue<'a>,
+pub struct DesktopEntryGroupEntry {
+    locale: Option<String>,
+    key: String,
+    value: EntryValue,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EntryValue<'a> {
-    content: Cow<'a, str>,
+pub struct EntryValue {
+    content: String,
     has_locale: bool,
 }
 
@@ -123,22 +123,22 @@ pub struct LinedError<E> {
     pub error: E,
 }
 
-impl<'a> DesktopEntry<'a> {
+impl DesktopEntry {
     /// Get a slice with all the groups in the desktop entry file
-    pub fn groups(&self) -> &[DesktopEntryGroup<'a>] {
+    pub fn groups(&self) -> &[DesktopEntryGroup] {
         &self.groups
     }
 
     /// Get a mutable slice with all the groups in the desktop entry file
-    pub fn groups_mut(&mut self) -> &mut [DesktopEntryGroup<'a>] {
+    pub fn groups_mut(&mut self) -> &mut [DesktopEntryGroup] {
         &mut self.groups
     }
 }
 
-impl<'a> TryFrom<&'a str> for DesktopEntry<'a> {
+impl TryFrom<String> for DesktopEntry {
     type Error = LinedError<GroupParseError>;
 
-    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         let mut lines = s.lines();
 
         let first_group = DesktopEntryGroup::from_lines(&mut lines, 0)?;
@@ -162,7 +162,7 @@ impl<'a> TryFrom<&'a str> for DesktopEntry<'a> {
     }
 }
 
-impl<'a> DesktopEntryGroup<'a> {
+impl DesktopEntryGroup {
     /// Get the group name
     ///
     /// Example:
@@ -173,12 +173,12 @@ impl<'a> DesktopEntryGroup<'a> {
     /// ```
     ///
     /// Here "Desktop Entry" is the group name.
-    pub fn name(&self) -> &'a str {
-        self.group_name
+    pub fn name(&self) -> String {
+        self.group_name.clone()
     }
 
     /// Get the entry belonging to a key
-    pub fn get(&self, key: &str) -> Option<&DesktopEntryGroupEntry<'a>> {
+    pub fn get(&self, key: &str) -> Option<&DesktopEntryGroupEntry> {
         self.entries().iter().find(|e| e.key() == key)
     }
 
@@ -188,17 +188,17 @@ impl<'a> DesktopEntryGroup<'a> {
     }
 
     /// Get a slice with all the entries in the group
-    pub fn entries(&self) -> &[DesktopEntryGroupEntry<'a>] {
+    pub fn entries(&self) -> &[DesktopEntryGroupEntry] {
         &self.entries
     }
 
     /// Get a mutable slice with all the entries in the group
-    pub fn entries_mut(&mut self) -> &mut [DesktopEntryGroupEntry<'a>] {
+    pub fn entries_mut(&mut self) -> &mut [DesktopEntryGroupEntry] {
         &mut self.entries
     }
 
     fn from_lines(
-        lines: &mut Lines<'a>,
+        lines: &mut Lines,
         line_nr: usize,
     ) -> Result<Self, LinedError<GroupParseError>> {
         let start_line_nr = line_nr;
@@ -258,7 +258,7 @@ impl<'a> DesktopEntryGroup<'a> {
     }
 }
 
-fn group_header_from_line(line: &str) -> Result<&str, GroupHeaderParseError> {
+fn group_header_from_line(line: &str) -> Result<String, GroupHeaderParseError> {
     debug_assert!(!line.contains('\n'));
 
     let line = line.trim();
@@ -285,22 +285,22 @@ fn group_header_from_line(line: &str) -> Result<&str, GroupHeaderParseError> {
         return Err(GroupHeaderParseError::ContainsControlCharacters);
     }
 
-    Ok(group_name)
+    Ok(String::from(group_name))
 }
 
-impl<'a> DesktopEntryGroupEntry<'a> {
+impl DesktopEntryGroupEntry {
     /// Get the key for the group entry
-    pub fn key(&self) -> &'a str {
-        self.key
+    pub fn key(&self) -> String {
+        self.key.clone()
     }
 
     /// Get the value for the group entry
-    pub fn value(&self) -> &EntryValue<'a> {
+    pub fn value(&self) -> &EntryValue {
         &self.value
     }
 
     fn from_lines(
-        lines: &mut Lines<'a>,
+        lines: &mut Lines,
         current_line_nr: &mut usize,
     ) -> Result<Self, EntryParseError> {
         let line = lines.next().ok_or(EntryParseError::Empty)?;
@@ -336,11 +336,11 @@ impl<'a> DesktopEntryGroupEntry<'a> {
             };
 
             (
-                key[..locale_start].trim_end(),
-                Some(&key[locale_start + 1..key.len() - 1]),
+                String::from(key[..locale_start].trim_end()),
+                Some(String::from(&key[locale_start + 1..key.len() - 1])),
             )
         } else {
-            (key, None)
+            (String::from(key), None)
         };
 
         let category_length = if let Some(category_length) = key.find('/') {
@@ -360,10 +360,9 @@ impl<'a> DesktopEntryGroupEntry<'a> {
         // Extend line if it ends with a '\'
         if !value.ends_with('\\') {
             let value = EntryValue {
-                content: Cow::Borrowed(value),
+                content: String::from(value),
                 has_locale: locale.is_some(),
             };
-
             return Ok(Self { locale, key, value });
         }
 
@@ -384,7 +383,7 @@ impl<'a> DesktopEntryGroupEntry<'a> {
         }
 
         let value = EntryValue {
-            content: Cow::Owned(value),
+            content: value,
             has_locale: locale.is_some(),
         };
 
@@ -392,7 +391,7 @@ impl<'a> DesktopEntryGroupEntry<'a> {
     }
 }
 
-impl<'a> EntryValue<'a> {
+impl EntryValue {
     /// Try to regard the entry value as a boolean
     pub fn as_boolean(self) -> Result<bool, ValueBoolError> {
         if self.has_locale {
@@ -420,7 +419,7 @@ impl<'a> EntryValue<'a> {
     }
 
     /// Try to regard the entry value as a string
-    pub fn as_string(&'a self) -> Result<&'a str, ValueStringError> {
+    pub fn as_string(self) -> Result<String, ValueStringError> {
         if self.has_locale {
             return Err(ValueStringError::HasLocale);
         }
@@ -435,12 +434,12 @@ impl<'a> EntryValue<'a> {
             return Err(ValueStringError::ControlCharacters);
         }
 
-        Ok(&line)
+        Ok(line.to_string())
     }
 
     /// Try to regard the entry value as a locale string
-    pub fn as_localestring(&'a self) -> &'a str {
-        &self.content.trim()
+    pub fn as_localestring(self) -> String {
+        self.content.trim().to_string()
     }
 }
 
@@ -606,11 +605,11 @@ mod tests {
                 assert_eq!(&entry.key, &$key);
                 assert_eq!(&entry.value.content, &$value);
                 #[allow(unused)]
-                let locale: Option<&str> = None;
+                let locale: Option<String> = None;
                 $(
                 let locale = Some($locale);
                 )?
-                assert_eq!(entry.locale, locale);
+                assert_eq!(entry.locale.unwrap(), locale.unwrap());
             };
             ($lines:literal => ! $err:ident) => {
                 let mut lines = $lines.lines();
@@ -751,16 +750,15 @@ key = value
 
     #[test]
     fn file_from_lines() {
-        let desktop_entry = DesktopEntry::try_from(
-            r#"
-[Desktop Entry]
-abc = xyz
-Exec=/usr/bin/lemurs
-
-[Other Group]
-key = value
-            "#,
-        );
+        let desktop_entry_str =             r#"
+        [Desktop Entry]
+        abc = xyz
+        Exec=/usr/bin/lemurs
+        
+        [Other Group]
+        key = value
+                    "#;
+        let desktop_entry = DesktopEntry::try_from(String::from(desktop_entry_str));
         assert!(
             desktop_entry.is_ok(),
             "{err}",
@@ -789,12 +787,12 @@ key = value
                 count += 1;
 
                 let entry_content = std::fs::read_to_string(path.clone()).unwrap();
-                let desktop_entry = DesktopEntry::try_from(&entry_content[..]);
+                let desktop_entry = DesktopEntry::try_from(entry_content.clone());
 
                 if let Err(err) = desktop_entry {
                     println!("Error = {err}");
                     println!("Path = {}", path.display());
-                    println!("Content = '''\n{entry_content}\n'''");
+                    println!("Content = '''\n{}\n'''", entry_content);
 
                     assert!(false);
                 }
