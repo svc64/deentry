@@ -16,6 +16,8 @@
 //!
 //! [Lemurs]: https://github.com/coastalwhite/lemurs
 
+mod writer;
+
 use std::fmt::Display;
 use std::num::ParseFloatError;
 use std::ops::Range;
