@@ -53,7 +53,6 @@ pub struct DesktopEntry {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DesktopEntryGroup {
-    line_range: Range<usize>,
     group_name: String,
     entries: Vec<DesktopEntryGroupEntry>,
 }
@@ -142,16 +141,16 @@ impl TryFrom<String> for DesktopEntry {
     fn try_from(s: String) -> Result<Self, Self::Error> {
         let mut lines = s.lines();
 
-        let first_group = DesktopEntryGroup::from_lines(&mut lines, 0)?;
+        let (first_group, line_range) = DesktopEntryGroup::from_lines(&mut lines, 0)?;
 
         let mut groups = Vec::new();
 
-        let mut line_nr = first_group.line_range.end;
+        let mut line_nr = line_range.end;
         groups.push(first_group);
         loop {
             match DesktopEntryGroup::from_lines(&mut lines, line_nr) {
-                Ok(group) => {
-                    line_nr = group.line_range.end;
+                Ok((group, line_range)) => {
+                    line_nr = line_range.end;
                     groups.push(group);
                 }
                 Err(lined_err) if lined_err.error == GroupParseError::Empty => break,
@@ -201,7 +200,7 @@ impl DesktopEntryGroup {
     fn from_lines(
         lines: &mut Lines,
         line_nr: usize,
-    ) -> Result<Self, LinedError<GroupParseError>> {
+    ) -> Result<(Self, Range<usize>), LinedError<GroupParseError>> {
         let start_line_nr = line_nr;
 
         // Skip over blank lines
@@ -251,11 +250,10 @@ impl DesktopEntryGroup {
             *lines = sub_lines;
         }
 
-        Ok(Self {
-            line_range: start_line_nr..current_line_nr,
+        Ok((Self {
             group_name,
             entries,
-        })
+        }, start_line_nr..current_line_nr))
     }
 }
 
@@ -701,9 +699,9 @@ mod tests {
                 let group = DesktopEntryGroup::from_lines(&mut lines, 0);
                 assert!(group.is_ok(), "Group formed from '{}' is Err({err:?})", $lines, err = group.unwrap_err());
 
-                let group = group.unwrap();
+                let (group, line_range) = group.unwrap();
 
-                assert_eq!(group.line_range.end, $end);
+                assert_eq!(line_range.end, $end);
 
                 let expected_entries: &[(&str, &str)] = &[$(($key, $value)),*];
 
