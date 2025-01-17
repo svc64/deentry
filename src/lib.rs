@@ -53,21 +53,27 @@ pub struct DesktopEntry {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DesktopEntryGroup {
+    /// ```
+    /// [Desktop Entry]
+    /// Exec=/usr/bin/cool
+    /// ```
+    ///
+    /// Here "Desktop Entry" is the group name.
+    /// "Exec" is an entry.
     group_name: String,
     entries: Vec<DesktopEntryGroupEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DesktopEntryGroupEntry {
-    locale: Option<String>,
-    key: String,
-    value: EntryValue,
+    pub locale: Option<String>,
+    pub key: String,
+    pub value: EntryValue,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EntryValue {
-    content: String,
-    has_locale: bool,
+    pub content: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,20 +106,17 @@ pub enum EntryParseError {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueStringError {
-    HasLocale,
     NotASCII,
     ControlCharacters,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueBoolError {
-    HasLocale,
     NotABoolean,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueNumericError {
-    HasLocale,
     FloatParseError(ParseFloatError),
 }
 
@@ -121,18 +124,6 @@ pub enum ValueNumericError {
 pub struct LinedError<E> {
     pub line_nr: usize,
     pub error: E,
-}
-
-impl DesktopEntry {
-    /// Get a slice with all the groups in the desktop entry file
-    pub fn groups(&self) -> &[DesktopEntryGroup] {
-        &self.groups
-    }
-
-    /// Get a mutable slice with all the groups in the desktop entry file
-    pub fn groups_mut(&mut self) -> &mut [DesktopEntryGroup] {
-        &mut self.groups
-    }
 }
 
 impl TryFrom<String> for DesktopEntry {
@@ -163,38 +154,14 @@ impl TryFrom<String> for DesktopEntry {
 }
 
 impl DesktopEntryGroup {
-    /// Get the group name
-    ///
-    /// Example:
-    ///
-    /// ```
-    /// [Desktop Entry]
-    /// Exec=/usr/bin/cool
-    /// ```
-    ///
-    /// Here "Desktop Entry" is the group name.
-    pub fn name(&self) -> String {
-        self.group_name.clone()
-    }
-
     /// Get the entry belonging to a key
     pub fn get(&self, key: &str) -> Option<&DesktopEntryGroupEntry> {
-        self.entries().iter().find(|e| e.key() == key)
+        self.entries.iter().find(|e| e.key == key)
     }
 
     /// Get the entry belonging to a key
     pub fn contains(&self, key: &str) -> bool {
         self.get(key).is_some()
-    }
-
-    /// Get a slice with all the entries in the group
-    pub fn entries(&self) -> &[DesktopEntryGroupEntry] {
-        &self.entries
-    }
-
-    /// Get a mutable slice with all the entries in the group
-    pub fn entries_mut(&mut self) -> &mut [DesktopEntryGroupEntry] {
-        &mut self.entries
     }
 
     fn from_lines(
@@ -288,16 +255,6 @@ fn group_header_from_line(line: &str) -> Result<String, GroupHeaderParseError> {
 }
 
 impl DesktopEntryGroupEntry {
-    /// Get the key for the group entry
-    pub fn key(&self) -> String {
-        self.key.clone()
-    }
-
-    /// Get the value for the group entry
-    pub fn value(&self) -> &EntryValue {
-        &self.value
-    }
-
     fn from_lines(
         lines: &mut Lines,
         current_line_nr: &mut usize,
@@ -360,7 +317,6 @@ impl DesktopEntryGroupEntry {
         if !value.ends_with('\\') {
             let value = EntryValue {
                 content: String::from(value),
-                has_locale: locale.is_some(),
             };
             return Ok(Self { locale, key, value });
         }
@@ -383,7 +339,6 @@ impl DesktopEntryGroupEntry {
 
         let value = EntryValue {
             content: value,
-            has_locale: locale.is_some(),
         };
 
         Ok(Self { locale, key, value })
@@ -393,10 +348,6 @@ impl DesktopEntryGroupEntry {
 impl EntryValue {
     /// Try to regard the entry value as a boolean
     pub fn as_boolean(self) -> Result<bool, ValueBoolError> {
-        if self.has_locale {
-            return Err(ValueBoolError::HasLocale);
-        }
-
         match self.content.trim() {
             "true" => Ok(true),
             "false" => Ok(false),
@@ -406,10 +357,6 @@ impl EntryValue {
 
     /// Try to regard the entry value as a numeric value
     pub fn as_numeric(self) -> Result<f32, ValueNumericError> {
-        if self.has_locale {
-            return Err(ValueNumericError::HasLocale);
-        }
-
         // NOTE: this might not be 100% correct as '%f' in scanf in C might be different.
         self.content
             .trim()
@@ -419,10 +366,6 @@ impl EntryValue {
 
     /// Try to regard the entry value as a string
     pub fn as_string(self) -> Result<String, ValueStringError> {
-        if self.has_locale {
-            return Err(ValueStringError::HasLocale);
-        }
-
         let line = self.content.trim();
 
         if !line.is_ascii() {
@@ -536,7 +479,6 @@ impl Display for ValueStringError {
         use ValueStringError as E;
 
         f.write_str(match self {
-            E::HasLocale => "Value cannot be converted into a string, because it has a locale",
             E::NotASCII => "Value cannot be converted into a string, because it is not valid ASCII",
             E::ControlCharacters => {
                 "Value cannot be converted into a string, because it contains control characters"
@@ -552,7 +494,6 @@ impl Display for ValueBoolError {
         use ValueBoolError as E;
 
         f.write_str(match self {
-            E::HasLocale => "Value cannot be converted into a boolean, because it has a locale",
             E::NotABoolean => {
                 "Value cannot be converted into a boolean, because it is not 'true' or 'false'"
             }
@@ -567,7 +508,6 @@ impl Display for ValueNumericError {
         use ValueNumericError as E;
 
         match self {
-            E::HasLocale => f.write_str("Value cannot be converted into a numeric value, because it has a locale"),
             E::FloatParseError(err) => write!(f, "Value cannot be converted into a numeric value, because it could not be parsed. Reason: '{err}'"),
         }
     }
@@ -608,7 +548,9 @@ mod tests {
                 $(
                 let locale = Some($locale);
                 )?
-                assert_eq!(entry.locale.unwrap(), locale.unwrap());
+                if locale.is_some() {
+                    assert_eq!(entry.locale.unwrap(), locale.unwrap());
+                }
             };
             ($lines:literal => ! $err:ident) => {
                 let mut lines = $lines.lines();
