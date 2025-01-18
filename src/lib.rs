@@ -10,7 +10,7 @@
 //! Exec=/path/to/app
 //! "#;
 //!
-//! let desktop_entry = DesktopEntry::try_from(desktop_entry)?;
+//! let desktop_entry = DesktopEntry::try_from(desktop_entry.to_string())?;
 //! # Ok::<(), deentry::LinedError<deentry::GroupParseError>>(())
 //! ```
 //!
@@ -43,7 +43,7 @@ use std::str::Lines;
 /// Exec=/path/to/app
 /// "#;
 ///
-/// let desktop_entry = DesktopEntry::try_from(desktop_entry)?;
+/// let desktop_entry = DesktopEntry::try_from(desktop_entry.to_string())?;
 /// # Ok::<(), deentry::LinedError<deentry::GroupParseError>>(())
 /// ```
 #[derive(Debug, Clone)]
@@ -53,10 +53,8 @@ pub struct DesktopEntry {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DesktopEntryGroup {
-    /// ```
     /// [Desktop Entry]
     /// Exec=/usr/bin/cool
-    /// ```
     ///
     /// Here "Desktop Entry" is the group name.
     /// "Exec" is an entry.
@@ -691,14 +689,14 @@ key = value
 
     #[test]
     fn file_from_lines() {
-        let desktop_entry_str =             r#"
-        [Desktop Entry]
-        abc = xyz
-        Exec=/usr/bin/lemurs
-        
-        [Other Group]
-        key = value
-                    "#;
+        let desktop_entry_str = r#"
+[Desktop Entry]
+abc = xyz
+Exec=/usr/bin/lemurs
+
+[Other Group]
+key = value
+"#;
         let desktop_entry = DesktopEntry::try_from(String::from(desktop_entry_str));
         assert!(
             desktop_entry.is_ok(),
