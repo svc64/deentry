@@ -48,7 +48,7 @@ use std::str::Lines;
 /// ```
 #[derive(Debug, Clone)]
 pub struct DesktopEntry {
-    groups: Vec<DesktopEntryGroup>,
+    pub groups: Vec<DesktopEntryGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,8 +58,8 @@ pub struct DesktopEntryGroup {
     ///
     /// Here "Desktop Entry" is the group name.
     /// "Exec" is an entry.
-    group_name: String,
-    entries: Vec<DesktopEntryGroupEntry>,
+    pub group_name: String,
+    pub entries: Vec<DesktopEntryGroupEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
