@@ -21,7 +21,7 @@ impl DesktopEntry {
         let mut entry_str = String::new();
         for group in &self.groups {
             entry_str += format!("[{}]\n", &group.group_name).as_str();
-            entry_str += format!("{}\n", group.to_string()).as_str();
+            entry_str += format!("{}\n\n", group.to_string()).as_str();
         }
         entry_str
     }
