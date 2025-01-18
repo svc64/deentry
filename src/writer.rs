@@ -26,3 +26,82 @@ impl DesktopEntry {
         entry_str
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{DesktopEntry, DesktopEntryGroup, DesktopEntryGroupEntry, EntryValue};
+
+    #[test]
+    fn desktop_entry_writing() {
+        let entry = DesktopEntry {
+            groups: [
+                DesktopEntryGroup {
+                    group_name: "Asaf's favorite food".to_string(),
+                    entries: [
+                        DesktopEntryGroupEntry {
+                            locale: Some("en_US".to_string()),
+                            key: "food".to_string(),
+                            value: EntryValue {
+                                content: "I love pizza".to_string(),
+                            }
+                        },
+                        DesktopEntryGroupEntry {
+                            locale: Some("he_IL".to_string()),
+                            key: "food".to_string(),
+                            value: EntryValue {
+                                content: "אני אוהב פיצה".to_string(),
+                            }
+                        },
+                        DesktopEntryGroupEntry {
+                            locale: None,
+                            key: "food".to_string(),
+                            value: EntryValue {
+                                content: "Eat healthy!".to_string(),
+                            }
+                        }
+                    ].to_vec(),
+                },
+                DesktopEntryGroup {
+                    group_name: "No one's favorite food".to_string(),
+                    entries: [
+                        DesktopEntryGroupEntry {
+                            locale: Some("en_US".to_string()),
+                            key: "food1".to_string(),
+                            value: EntryValue {
+                                content: "I love rocks".to_string(),
+                            }
+                        },
+                        DesktopEntryGroupEntry {
+                            locale: Some("he_IL".to_string()),
+                            key: "food2".to_string(),
+                            value: EntryValue {
+                                content: "אני דינוזאור".to_string(),
+                            }
+                        },
+                        DesktopEntryGroupEntry {
+                            locale: None,
+                            key: "food3".to_string(),
+                            value: EntryValue {
+                                content: "Eat whatever!".to_string(),
+                            }
+                        }
+                    ].to_vec()
+                }
+            ].to_vec()
+        };
+        let expected_content = 
+r#"[Asaf's favorite food]
+food[en_US]=I love pizza
+food[he_IL]=אני אוהב פיצה
+food=Eat healthy!
+
+[No one's favorite food]
+food1[en_US]=I love rocks
+food2[he_IL]=אני דינוזאור
+food3=Eat whatever!
+
+"#;
+        assert_eq!(expected_content, entry.to_string())
+    }
+}
